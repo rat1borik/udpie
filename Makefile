@@ -36,3 +36,6 @@ clean:
 # Run all checks (lint + test)
 check: lint test
 
+generate-swagger:
+	@swag init -g cmd/signaller/main.go --output docs --parseDependency --parseInternal --dir .
+

@@ -4,44 +4,63 @@ package handler
 import (
 	"encoding/json"
 
+	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
 
 	"udpie/internal/model/contract"
 )
 
+type RegisterFileRequest struct {
+	Name    string    `json:"name"`
+	Size    uint64    `json:"size"`
+	OwnerId uuid.UUID `json:"owner_id"`
+}
+
 type FileHandler struct {
-	service contract.SignallerFileService
+	service         contract.SignallerFileService
+	producerService contract.SignallerProducerService
 }
 
-func NewFileHandler(service contract.SignallerFileService) *FileHandler {
+func NewFileHandler(service contract.SignallerFileService, producerService contract.SignallerProducerService) *FileHandler {
 	return &FileHandler{
-		service: service,
+		service:         service,
+		producerService: producerService,
 	}
 }
 
+// RegisterFile registers a new file
+// @Summary      Register a new file
+// @Description  Register a new file with metadata and associate it with a producer
+// @Tags         files
+// @Accept       json
+// @Produce      json
+// @Param        request  body      RegisterFileRequest  true  "File registration request"
+// @Success      200      {object}  map[string]any  "Success response with file ID"
+// @Failure      400      {object}  map[string]any  "Invalid request body"
+// @Failure      500      {object}  map[string]any  "Internal server error"
+// @Router       /files [post]
 func (h *FileHandler) RegisterFile(ctx *fasthttp.RequestCtx) {
-	if !ctx.IsPost() {
-		ctx.Error("Method not allowed", fasthttp.StatusMethodNotAllowed)
-		return
-	}
-
-	var options contract.RegisterFileOptions
-	if err := json.Unmarshal(ctx.PostBody(), &options); err != nil {
+	var request RegisterFileRequest
+	if err := json.Unmarshal(ctx.PostBody(), &request); err != nil {
 		ctx.Error("Invalid request body", fasthttp.StatusBadRequest)
 		return
 	}
 
-	id, err := h.service.RegisterFile(options)
+	producer, err := h.producerService.GetProducer(request.OwnerId)
+	if err != nil {
+		ctx.Error("Producer not found", fasthttp.StatusBadRequest)
+		return
+	}
+
+	id, err := h.service.RegisterFile(contract.RegisterFileOptions{
+		Name:  request.Name,
+		Size:  request.Size,
+		Owner: producer,
+	})
 	if err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
 
-	ctx.SetContentType("application/json")
-	response := map[string]string{"id": id.String()}
-	if body, err := json.Marshal(response); err == nil {
-		ctx.SetBody(body)
-	} else {
-		ctx.Error("Failed to encode response", fasthttp.StatusInternalServerError)
-	}
+	Success(ctx, map[string]string{"id": id.String()})
 }

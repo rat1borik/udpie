@@ -1,0 +1,149 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API for UDPie file transfer signaller service",
+        "title": "UDPie Signaller API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api",
+    "paths": {
+        "/files": {
+            "post": {
+                "description": "Register a new file with metadata and associate it with a producer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Register a new file",
+                "parameters": [
+                    {
+                        "description": "File registration request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.RegisterFileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success response with file ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/producers": {
+            "post": {
+                "description": "Register a new producer with UDP options for file transfer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "producers"
+                ],
+                "summary": "Register a new producer",
+                "parameters": [
+                    {
+                        "description": "Producer registration options",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/contract.RegisterProducerOptions"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success response with producer ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "contract.RegisterProducerOptions": {
+            "type": "object",
+            "properties": {
+                "udp_options": {
+                    "$ref": "#/definitions/model.UdpOptions"
+                }
+            }
+        },
+        "handler.RegisterFileRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.UdpOptions": {
+            "type": "object",
+            "properties": {
+                "external_ip": {
+                    "type": "string"
+                },
+                "external_port": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}

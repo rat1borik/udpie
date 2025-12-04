@@ -25,17 +25,9 @@ func (s *FileService) RegisterFile(options contract.RegisterFileOptions) (uuid.U
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := uuid.New()
-	fileMeta := &model.FileMeta{
-		Id:    id,
-		Name:  options.Name,
-		Size:  options.Size,
-		Hash:  []byte{}, // TODO: calculate hash if needed
-		Owner: options.Owner,
-	}
-
-	s.files[id] = fileMeta
-	return id, nil
+	fileMeta := model.NewFileMeta(options.Name, options.Size, options.Hash, options.Owner)
+	s.files[fileMeta.Id] = fileMeta
+	return fileMeta.Id, nil
 }
 
 func (s *FileService) GetFileMeta(id uuid.UUID) (*model.FileMeta, error) {

@@ -1,6 +1,8 @@
 package model
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 type FileMeta struct {
 	Id    uuid.UUID `json:"id"`
@@ -8,4 +10,14 @@ type FileMeta struct {
 	Size  uint64    `json:"size"`
 	Hash  []byte    `json:"hash"`
 	Owner *Producer `json:"owner"`
+}
+
+func NewFileMeta(name string, size uint64, hash []byte, owner *Producer) *FileMeta {
+	return &FileMeta{
+		Id:    uuid.New(),
+		Name:  name,
+		Size:  size,
+		Hash:  hash,
+		Owner: owner,
+	}
 }

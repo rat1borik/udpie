@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/fasthttp/router"
+	swagger "github.com/swaggo/fasthttp-swagger"
 
 	"udpie/internal/model/contract"
 )
@@ -17,11 +18,15 @@ func NewRouter(
 ) *Router {
 	return &Router{
 		producerHandler: NewProducerHandler(producerService),
-		fileHandler:     NewFileHandler(fileService),
+		fileHandler:     NewFileHandler(fileService, producerService),
 	}
 }
 
 func (r *Router) SetupRoutes(router *router.Router) {
-	router.POST("/api/producers", r.producerHandler.RegisterProducer)
-	router.POST("/api/files", r.fileHandler.RegisterFile)
+	apiGroup := router.Group("/api")
+	apiGroup.POST("/producers", r.producerHandler.RegisterProducer)
+	apiGroup.POST("/files", r.fileHandler.RegisterFile)
+
+	// Swagger UI
+	router.GET("/swagger/{filepath:*}", swagger.WrapHandler())
 }

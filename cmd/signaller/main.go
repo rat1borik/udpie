@@ -12,14 +12,23 @@ import (
 	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 
+	_ "udpie/docs" // swagger docs
 	"udpie/internal/config"
 	"udpie/internal/handler"
 	"udpie/internal/service/signaller"
 	"udpie/pkg/logutils"
 )
 
+// @title           UDPie Signaller API
+// @version         1.0
+// @description     API for UDPie file transfer signaller service
+
+// @BasePath  /api
+
+// @schemes   http https
+
 const (
-	shutdownTimeout = 30 * time.Second
+	shutdownTimeout = 2 * time.Second
 )
 
 func main() {

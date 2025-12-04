@@ -1,0 +1,99 @@
+basePath: /api
+definitions:
+  contract.RegisterProducerOptions:
+    properties:
+      udp_options:
+        $ref: '#/definitions/model.UdpOptions'
+    type: object
+  handler.RegisterFileRequest:
+    properties:
+      name:
+        type: string
+      owner_id:
+        type: string
+      size:
+        type: integer
+    type: object
+  model.UdpOptions:
+    properties:
+      external_ip:
+        type: string
+      external_port:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: API for UDPie file transfer signaller service
+  title: UDPie Signaller API
+  version: "1.0"
+paths:
+  /files:
+    post:
+      consumes:
+      - application/json
+      description: Register a new file with metadata and associate it with a producer
+      parameters:
+      - description: File registration request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterFileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with file ID
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new file
+      tags:
+      - files
+  /producers:
+    post:
+      consumes:
+      - application/json
+      description: Register a new producer with UDP options for file transfer
+      parameters:
+      - description: Producer registration options
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/contract.RegisterProducerOptions'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with producer ID
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new producer
+      tags:
+      - producers
+schemes:
+- http
+- https
+swagger: "2.0"

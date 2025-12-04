@@ -25,11 +25,8 @@ func (s *ProducerService) RegisterProducer(options contract.RegisterProducerOpti
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := uuid.New()
-	producer := &model.Producer{
-		Id:         id,
-		UdpOptions: options.UdpOptions,
-	}
+	producer := model.NewProducer(options.UdpOptions)
+	id := producer.Id
 
 	s.producers[id] = producer
 	return id, nil
