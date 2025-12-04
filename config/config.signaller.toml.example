@@ -1,0 +1,15 @@
+[server]
+port = "8080"
+host = ""
+
+[log]
+level = "info"
+file = "signaller.log"
+format = "text"
+output_file = true
+output_std = true
+max_size = 10
+max_backups = 7
+max_age = 14
+compress = true
+

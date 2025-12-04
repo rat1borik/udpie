@@ -9,7 +9,7 @@ import (
 
 type RegisterFileOptions struct {
 	Name  string          `json:"name"`
-	Size  int64           `json:"size"`
+	Size  uint64          `json:"size"`
 	Owner *model.Producer `json:"owner"`
 }
 

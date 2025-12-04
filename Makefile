@@ -1,4 +1,4 @@
-.PHONY: lint lint-fix test test-coverage build clean
+.PHONY: lint lint-fix test test-coverage build-signaller build-producer build-client clean
 
 # Install golangci-lint if not present
 lint-install:
@@ -19,8 +19,14 @@ test-coverage:
 	@echo "Coverage report generated: coverage.html"
 
 # Build all binaries
-build:
-	@go build ./...
+build-signaller:
+	@go build -o bin/signaller cmd/signaller/main.go
+
+build-producer:
+	@go build -o bin/producer cmd/producer/main.go
+
+build-client:
+	@go build -o bin/client cmd/client/main.go
 
 # Clean build artifacts
 clean:
