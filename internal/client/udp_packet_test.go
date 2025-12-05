@@ -176,11 +176,6 @@ func TestUdpPacket_Marshal(t *testing.T) {
 			if len(data) != expectedSize {
 				t.Errorf("Marshal() data size = %d, want %d", len(data), expectedSize)
 			}
-
-			// Verify DataSize was set correctly
-			if tt.packet.DataSize != uint64(len(tt.packet.Data)) {
-				t.Errorf("Marshal() DataSize = %d, want %d", tt.packet.DataSize, len(tt.packet.Data))
-			}
 		})
 	}
 }
@@ -215,7 +210,13 @@ func TestUdpPacket_Unmarshal(t *testing.T) {
 			name:    "header with declared data size larger than available",
 			data:    nil, // Will be set in test
 			wantErr: true,
-			errMsg:  "data too short: declared data size exceeds available data",
+			errMsg:  "declared data size not equals available data size",
+		},
+		{
+			name:    "header with declared data size smaller than available",
+			data:    nil, // Will be set in test
+			wantErr: true,
+			errMsg:  "declared data size not equals available data size",
 		},
 	}
 
@@ -244,9 +245,22 @@ func TestUdpPacket_Unmarshal(t *testing.T) {
 				// SerialNumber = 0 (already zero)
 				// TransferId = 0 (already zero)
 				// Timestamp offset = 0 (already zero)
-				// Set DataSize to 100 (larger than available 5 bytes)
+				// Set DataSize to 100 (but only 5 bytes available, so sizes don't match)
 				dataSizeOffset := contentTypeSize + serialNumberSize + transferIdSize + timestampSize
 				binary.BigEndian.PutUint16(testData[dataSizeOffset:dataSizeOffset+dataSizeSize], 100)
+			}
+
+			// For the "header with declared data size smaller than available" case
+			if tt.name == "header with declared data size smaller than available" {
+				// Create buffer with 100 bytes of data, but set DataSize to 5
+				testData = make([]byte, headerSize+100)
+				testData[0] = 0x01 // ContentType
+				// SerialNumber = 0 (already zero)
+				// TransferId = 0 (already zero)
+				// Timestamp offset = 0 (already zero)
+				// Set DataSize to 5 (but 100 bytes available, so sizes don't match)
+				dataSizeOffset := contentTypeSize + serialNumberSize + transferIdSize + timestampSize
+				binary.BigEndian.PutUint16(testData[dataSizeOffset:dataSizeOffset+dataSizeSize], 5)
 			}
 
 			err = packet.Unmarshal(testData, transferStartTime)
@@ -400,68 +414,10 @@ func TestUdpPacket_Marshal_Unmarshal_RoundTrip(t *testing.T) {
 					unmarshaled.Timestamp, actualMillis, tt.packet.Timestamp, expectedMillis)
 			}
 
-			if unmarshaled.DataSize != uint64(len(tt.packet.Data)) {
-				t.Errorf("DataSize = %v, want %v", unmarshaled.DataSize, len(tt.packet.Data))
-			}
-
 			if !reflect.DeepEqual(unmarshaled.Data, tt.packet.Data) {
 				t.Errorf("Data = %v, want %v", unmarshaled.Data, tt.packet.Data)
 			}
 		})
-	}
-}
-
-func TestUdpPacket_Marshal_DataSize_Update(t *testing.T) {
-	transferStartTime := time.UnixMilli(1000000000)
-	packet := &UdpPacket{
-		ContentType:  0x01,
-		SerialNumber: 123,
-		TransferId:   uuid.New(),
-		Timestamp:    time.UnixMilli(1000001000),
-		DataSize:     999, // Wrong value
-		Data:         []byte("test"),
-	}
-
-	// Marshal should update DataSize
-	_, err := packet.Marshal(transferStartTime)
-	if err != nil {
-		t.Fatalf("Marshal() error = %v", err)
-	}
-
-	if packet.DataSize != 4 {
-		t.Errorf("DataSize should be updated to 4, got %d", packet.DataSize)
-	}
-}
-
-func TestUdpPacket_Unmarshal_DataSize_Mismatch(t *testing.T) {
-	transferStartTime := time.UnixMilli(1000000000)
-	// Create a packet with DataSize = 100 but only 10 bytes of actual data
-	packet := &UdpPacket{
-		ContentType:  0x01,
-		SerialNumber: 123,
-		TransferId:   uuid.New(),
-		Timestamp:    time.UnixMilli(1000001000),
-		Data:         []byte("0123456789"), // 10 bytes
-	}
-
-	data, err := packet.Marshal(transferStartTime)
-	if err != nil {
-		t.Fatalf("Marshal() error = %v", err)
-	}
-
-	// Manually modify DataSize in the marshaled data to be larger than available
-	// DataSize is at offset: contentTypeSize(1) + serialNumberSize(4) + transferIdSize(16) + timestampSize(4) = 25
-	dataSizeOffset := contentTypeSize + serialNumberSize + transferIdSize + timestampSize
-	binary.BigEndian.PutUint16(data[dataSizeOffset:dataSizeOffset+dataSizeSize], 100) // Set to 100
-
-	// Try to unmarshal - should fail
-	unmarshaled := &UdpPacket{}
-	err = unmarshaled.Unmarshal(data, transferStartTime)
-	if err == nil {
-		t.Error("Unmarshal() should fail when DataSize exceeds available data")
-	}
-	if err.Error() != "data too short: declared data size exceeds available data" {
-		t.Errorf("Unmarshal() error = %v, want 'data too short: declared data size exceeds available data'", err)
 	}
 }
 

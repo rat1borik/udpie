@@ -23,7 +23,6 @@ type UdpPacket struct {
 	SerialNumber uint64
 	TransferId   uuid.UUID
 	Timestamp    time.Time
-	DataSize     uint16
 	Data         []byte
 }
 
@@ -31,7 +30,10 @@ type UdpPacket struct {
 // Format: [1 byte: ContentType] [4 bytes: SerialNumber (big-endian)] [16 bytes: TransferId]
 // [4 bytes: Timestamp (relative to transferStartTime, big-endian)] [2 bytes: DataSize (big-endian)] [variable: Data]
 func (u *UdpPacket) Marshal(transferStartTime time.Time) ([]byte, error) {
-	u.DataSize = uint64(len(u.Data))
+	lenData := len(u.Data)
+	if lenData > math.MaxUint16 {
+		return nil, errors.New("data size too large")
+	}
 
 	buf := make([]byte, headerSize+len(u.Data))
 	offset := 0
@@ -58,12 +60,8 @@ func (u *UdpPacket) Marshal(transferStartTime time.Time) ([]byte, error) {
 	binary.BigEndian.PutUint32(buf[offset:offset+timestampSize], uint32(timestampMs))
 	offset += timestampSize
 
-	if u.DataSize > math.MaxUint16 {
-		return nil, errors.New("data size too large")
-	}
-
 	//nolint:gosec
-	binary.BigEndian.PutUint16(buf[offset:offset+dataSizeSize], uint16(u.DataSize))
+	binary.BigEndian.PutUint16(buf[offset:offset+dataSizeSize], uint16(lenData))
 	offset += dataSizeSize
 
 	copy(buf[offset:], u.Data)
@@ -96,19 +94,19 @@ func (u *UdpPacket) Unmarshal(data []byte, transferStartTime time.Time) error {
 	offset += timestampSize
 
 	//nolint:gosec
-	u.DataSize = uint64(binary.BigEndian.Uint16(data[offset : offset+dataSizeSize]))
+	lenData := binary.BigEndian.Uint16(data[offset : offset+dataSizeSize])
 	offset += dataSizeSize
 
 	//nolint:gosec
-	if len(data) < headerSize+int(u.DataSize) {
-		return errors.New("data too short: declared data size exceeds available data")
+	if len(data) != headerSize+int(lenData) {
+		return errors.New("declared data size not equals available data size")
 	}
 
 	//nolint:gosec
-	u.Data = make([]byte, u.DataSize)
+	u.Data = make([]byte, lenData)
 
 	//nolint:gosec
-	copy(u.Data, data[offset:offset+int(u.DataSize)])
+	copy(u.Data, data[offset:offset+int(lenData)])
 
 	return nil
 }
