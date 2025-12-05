@@ -32,19 +32,16 @@ const (
 )
 
 func main() {
-	// Load configuration
 	cfg, err := config.LoadSignallerConfig()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	// Initialize logger
 	err = initLogger(&cfg.Log)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
 	}
 
-	// Start server
 	startServer(cfg)
 }
 
@@ -112,15 +109,11 @@ func gracefulShutdown(ln net.Listener, serverErrChan chan error, timeout time.Du
 		logutils.Info("Listener closed, no longer accepting new connections")
 	}
 
-	// Wait for active connections to finish or timeout
 	done := make(chan struct{})
 	go func() {
-		// Wait for server to finish processing existing connections
-		// The server will stop when all active connections are closed
 		select {
 		case err := <-serverErrChan:
 			if err != nil {
-				// Expected error when listener is closed
 				logutils.Debug("Server stopped after listener close")
 			}
 		case <-shutdownCtx.Done():
