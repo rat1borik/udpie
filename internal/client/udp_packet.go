@@ -23,7 +23,7 @@ type UdpPacket struct {
 	SerialNumber uint64
 	TransferId   uuid.UUID
 	Timestamp    time.Time
-	DataSize     uint64
+	DataSize     uint16
 	Data         []byte
 }
 
