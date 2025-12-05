@@ -132,6 +132,29 @@ func TestUdpPacket_Marshal(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "packet with data size exceeding uint16",
+			packet: &UdpPacket{
+				ContentType:  0x0A,
+				SerialNumber: 100,
+				TransferId:   testTransferId,
+				Timestamp:    time.UnixMilli(1000001000),
+				Data:         make([]byte, math.MaxUint16+1), // Exceeds uint16 max
+			},
+			wantErr: true,
+			errMsg:  "data size too large",
+		},
+		{
+			name: "packet with max uint16 data size",
+			packet: &UdpPacket{
+				ContentType:  0x0B,
+				SerialNumber: 100,
+				TransferId:   testTransferId,
+				Timestamp:    time.UnixMilli(1000001000),
+				Data:         make([]byte, math.MaxUint16), // Max uint16
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -223,7 +246,7 @@ func TestUdpPacket_Unmarshal(t *testing.T) {
 				// Timestamp offset = 0 (already zero)
 				// Set DataSize to 100 (larger than available 5 bytes)
 				dataSizeOffset := contentTypeSize + serialNumberSize + transferIdSize + timestampSize
-				binary.BigEndian.PutUint64(testData[dataSizeOffset:dataSizeOffset+dataSizeSize], 100)
+				binary.BigEndian.PutUint16(testData[dataSizeOffset:dataSizeOffset+dataSizeSize], 100)
 			}
 
 			err = packet.Unmarshal(testData, transferStartTime)
@@ -429,7 +452,7 @@ func TestUdpPacket_Unmarshal_DataSize_Mismatch(t *testing.T) {
 	// Manually modify DataSize in the marshaled data to be larger than available
 	// DataSize is at offset: contentTypeSize(1) + serialNumberSize(4) + transferIdSize(16) + timestampSize(4) = 25
 	dataSizeOffset := contentTypeSize + serialNumberSize + transferIdSize + timestampSize
-	binary.BigEndian.PutUint64(data[dataSizeOffset:dataSizeOffset+dataSizeSize], 100) // Set to 100
+	binary.BigEndian.PutUint16(data[dataSizeOffset:dataSizeOffset+dataSizeSize], 100) // Set to 100
 
 	// Try to unmarshal - should fail
 	unmarshaled := &UdpPacket{}

@@ -14,7 +14,7 @@ const (
 	serialNumberSize = 4
 	transferIdSize   = 16
 	timestampSize    = 4
-	dataSizeSize     = 8
+	dataSizeSize     = 2
 	headerSize       = contentTypeSize + serialNumberSize + transferIdSize + timestampSize + dataSizeSize
 )
 
@@ -29,7 +29,7 @@ type UdpPacket struct {
 
 // Marshal serializes the UdpPacket into a byte slice.
 // Format: [1 byte: ContentType] [4 bytes: SerialNumber (big-endian)] [16 bytes: TransferId]
-// [4 bytes: Timestamp (relative to transferStartTime, big-endian)] [8 bytes: DataSize (big-endian)] [variable: Data]
+// [4 bytes: Timestamp (relative to transferStartTime, big-endian)] [2 bytes: DataSize (big-endian)] [variable: Data]
 func (u *UdpPacket) Marshal(transferStartTime time.Time) ([]byte, error) {
 	u.DataSize = uint64(len(u.Data))
 
@@ -58,7 +58,12 @@ func (u *UdpPacket) Marshal(transferStartTime time.Time) ([]byte, error) {
 	binary.BigEndian.PutUint32(buf[offset:offset+timestampSize], uint32(timestampMs))
 	offset += timestampSize
 
-	binary.BigEndian.PutUint64(buf[offset:offset+dataSizeSize], u.DataSize)
+	if u.DataSize > math.MaxUint16 {
+		return nil, errors.New("data size too large")
+	}
+
+	//nolint:gosec
+	binary.BigEndian.PutUint16(buf[offset:offset+dataSizeSize], uint16(u.DataSize))
 	offset += dataSizeSize
 
 	copy(buf[offset:], u.Data)
@@ -91,7 +96,7 @@ func (u *UdpPacket) Unmarshal(data []byte, transferStartTime time.Time) error {
 	offset += timestampSize
 
 	//nolint:gosec
-	u.DataSize = binary.BigEndian.Uint64(data[offset : offset+dataSizeSize])
+	u.DataSize = uint64(binary.BigEndian.Uint16(data[offset : offset+dataSizeSize]))
 	offset += dataSizeSize
 
 	//nolint:gosec
