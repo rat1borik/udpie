@@ -48,8 +48,9 @@ func main() {
 func startServer(cfg *config.SignallerConfig) {
 	producerService := signaller.NewProducerService()
 	fileService := signaller.NewFileService()
+	transferService := signaller.NewTransferService(fileService, producerService)
 
-	appRouter := handler.NewRouter(producerService, fileService)
+	appRouter := handler.NewRouter(producerService, fileService, transferService)
 	fastRouter := router.New()
 	appRouter.SetupRoutes(fastRouter)
 
