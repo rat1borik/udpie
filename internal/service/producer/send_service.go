@@ -111,7 +111,7 @@ func (*TransferService) sendFile(ctx context.Context, transfer *ActiveTransfer) 
 	fmt.Printf("Consumer: %s\n", transfer.ConsumerAddr.String())
 
 	// Send all blocks
-	for blockNum := range uint64(transfer.TotalBlocks) {
+	for blockNum := range transfer.TotalBlocks {
 		select {
 		case <-ctx.Done():
 			fmt.Printf("Transfer canceled: %s\n", transfer.TransferId.String())

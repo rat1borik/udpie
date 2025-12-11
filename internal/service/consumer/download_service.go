@@ -199,7 +199,7 @@ func (*TransferService) writeFile(transfer *ActiveTransfer) error {
 	defer file.Close()
 
 	// Write blocks in order
-	for blockNum := range uint64(transfer.TotalBlocks) {
+	for blockNum := range transfer.TotalBlocks {
 		blockData, exists := transfer.ReceivedBlocks[blockNum]
 		if !exists {
 			// Missing block, fill with zeros
