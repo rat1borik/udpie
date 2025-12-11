@@ -5,11 +5,18 @@ definitions:
       udp_options:
         $ref: '#/definitions/model.UdpOptions'
     type: object
+  handler.InitDownloadRequest:
+    properties:
+      client_udp_options:
+        $ref: '#/definitions/model.UdpOptions'
+      id:
+        type: string
+    type: object
   handler.RegisterFileRequest:
     properties:
       name:
         type: string
-      owner_id:
+      producer_id:
         type: string
       size:
         type: integer
@@ -60,6 +67,38 @@ paths:
       summary: Register a new file
       tags:
       - files
+  /initDownload:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Init download request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.InitDownloadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with transfer ID
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Init download
+      tags:
+      - download
   /producers:
     post:
       consumes:
@@ -93,6 +132,32 @@ paths:
       summary: Register a new producer
       tags:
       - producers
+  /ws:
+    get:
+      description: Establishes a WebSocket connection for a producer to receive transfer
+        notifications
+      parameters:
+      - description: Producer ID
+        in: query
+        name: producer_id
+        required: true
+        type: string
+      responses:
+        "101":
+          description: Switching Protocols
+        "400":
+          description: Invalid producer ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: WebSocket connection for producers
+      tags:
+      - websocket
 schemes:
 - http
 - https

@@ -1,4 +1,4 @@
-.PHONY: lint lint-fix test test-coverage build-signaller build-producer build-client clean
+.PHONY: lint lint-fix test test-coverage build build-signaller build-producer build-client clean help
 
 # Install golangci-lint if not present
 lint-install:
@@ -20,13 +20,17 @@ test-coverage:
 
 # Build all binaries
 build-signaller:
-	@go build -o bin/signaller cmd/signaller/main.go
+	@go build -o build/signaller/signaller.exe ./cmd/signaller
 
 build-producer:
-	@go build -o bin/producer cmd/producer/main.go
+	@go build -o build/producer/producer.exe ./cmd/producer
 
 build-client:
-	@go build -o bin/client cmd/client/main.go
+	@go build -o build/client/client.exe ./cmd/client
+
+# Build all binaries
+build: build-signaller build-producer build-client
+	@echo "All binaries built successfully"
 
 # Clean build artifacts
 clean:
@@ -38,4 +42,19 @@ check: lint test
 
 generate-swagger:
 	@swag init -g cmd/signaller/main.go --output docs --parseDependency --parseInternal --dir .
+
+# Show help message
+help:
+	@echo "Available targets:"
+	@echo "  build            - Build all binaries (signaller, producer, client)"
+	@echo "  build-signaller  - Build signaller binary"
+	@echo "  build-producer   - Build producer binary"
+	@echo "  build-client     - Build client binary"
+	@echo "  lint             - Run linters"
+	@echo "  lint-install     - Install golangci-lint"
+	@echo "  test             - Run tests"
+	@echo "  test-coverage    - Run tests with coverage report"
+	@echo "  check            - Run lint and test"
+	@echo "  clean            - Clean build artifacts"
+	@echo "  generate-swagger - Generate Swagger documentation"
 

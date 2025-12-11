@@ -64,6 +64,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/initDownload": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "download"
+                ],
+                "summary": "Init download",
+                "parameters": [
+                    {
+                        "description": "Init download request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.InitDownloadRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success response with transfer ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/producers": {
             "post": {
                 "description": "Register a new producer with UDP options for file transfer",
@@ -112,6 +160,43 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/ws": {
+            "get": {
+                "description": "Establishes a WebSocket connection for a producer to receive transfer notifications",
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "WebSocket connection for producers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Producer ID",
+                        "name": "producer_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols"
+                    },
+                    "400": {
+                        "description": "Invalid producer ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -123,13 +208,24 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.InitDownloadRequest": {
+            "type": "object",
+            "properties": {
+                "client_udp_options": {
+                    "$ref": "#/definitions/model.UdpOptions"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.RegisterFileRequest": {
             "type": "object",
             "properties": {
                 "name": {
                     "type": "string"
                 },
-                "owner_id": {
+                "producer_id": {
                     "type": "string"
                 },
                 "size": {

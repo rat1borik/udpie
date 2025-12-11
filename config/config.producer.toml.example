@@ -1,0 +1,12 @@
+[signaller]
+url = "http://localhost:8080"
+
+[stun]
+servers = [
+    "stun.nextcloud.com:3478",
+    "global.stun.twilio.com:3478",
+    "stun.l.google.com:19302"
+]
+local_port = 50000
+timeout = 5
+

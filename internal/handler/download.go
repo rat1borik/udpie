@@ -33,17 +33,17 @@ func NewInitDownloadHandler(service contract.SignallerFileService,
 	}
 }
 
-// RegisterFile registers a new file
-// @Summary      Register a new file
-// @Description  Register a new file with metadata and associate it with a producer
-// @Tags         files
+// InitDownload inits download of a file
+// @Summary      Init download
+// @Description
+// @Tags         download
 // @Accept       json
 // @Produce      json
-// @Param        request  body      RegisterFileRequest  true  "File registration request"
-// @Success      200      {object}  map[string]any  "Success response with file ID"
+// @Param        request  body      InitDownloadRequest  true  "Init download request"
+// @Success      200      {object}  map[string]any  "Success response with transfer ID"
 // @Failure      400      {object}  map[string]any  "Invalid request body"
 // @Failure      500      {object}  map[string]any  "Internal server error"
-// @Router       /files [post]
+// @Router       /initDownload [post]
 func (h *InitDownloadHandler) InitDownload(ctx *fasthttp.RequestCtx) {
 	var request InitDownloadRequest
 	if err := json.Unmarshal(ctx.PostBody(), &request); err != nil {

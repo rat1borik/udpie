@@ -1,6 +1,7 @@
 package signaller
 
 import (
+	"encoding/json"
 	"errors"
 	"sync"
 
@@ -66,10 +67,16 @@ func (s *TransferService) InitTransfer(options contract.InitTransferOptions) (*c
 		return nil, err
 	}
 
-	respData, ok := resp.Data.(model.ProducerInitTransferResponseData)
-	if !ok {
+	rd, err := json.Marshal(resp.Data)
+	if err != nil {
 		transfer.Status = model.TransferStatusFailed
-		return nil, errors.New("invalid response data")
+		return nil, err
+	}
+
+	var respData model.ProducerInitTransferResponseData
+	if err := json.Unmarshal(rd, &respData); err != nil {
+		transfer.Status = model.TransferStatusFailed
+		return nil, err
 	}
 
 	if respData.Status == model.RequestTransferStatusRejected {
