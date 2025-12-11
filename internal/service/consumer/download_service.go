@@ -19,14 +19,16 @@ type TransferService struct {
 }
 
 type ActiveTransfer struct {
-	TransferId     uuid.UUID
-	FilePath       string
-	BlockSize      uint64
-	TotalBlocks    uint64
-	ProducerAddr   *net.UDPAddr
-	Status         string
-	ReceivedBlocks map[uint64][]byte
-	mu             sync.Mutex
+	TransferId        uuid.UUID
+	FilePath          string
+	BlockSize         uint64
+	TotalBlocks       uint64
+	ProducerAddr      *net.UDPAddr
+	TransferStartTime time.Time
+	Status            string
+	ReceivedBlocks    map[uint64][]byte
+	mu                sync.Mutex
+	DoneChan          chan struct{}
 }
 
 func NewTransferService() *TransferService {
@@ -37,35 +39,79 @@ func NewTransferService() *TransferService {
 
 // StartTransfer starts receiving a file from producer
 func (s *TransferService) StartTransfer(
+	ctx context.Context,
 	transferId uuid.UUID,
 	filePath string,
 	blockSize uint64,
 	totalBlocks uint64,
 	producerAddr *net.UDPAddr,
-) error {
+) (chan struct{}, error) {
 	// Create active transfer
 	transfer := &ActiveTransfer{
-		TransferId:     transferId,
-		FilePath:       filePath,
-		BlockSize:      blockSize,
-		TotalBlocks:    totalBlocks,
-		ProducerAddr:   producerAddr,
-		Status:         "receiving",
-		ReceivedBlocks: make(map[uint64][]byte),
+		TransferId:        transferId,
+		FilePath:          filePath,
+		BlockSize:         blockSize,
+		TotalBlocks:       totalBlocks,
+		ProducerAddr:      producerAddr,
+		TransferStartTime: time.Now(),
+		Status:            "receiving",
+		ReceivedBlocks:    make(map[uint64][]byte),
+		DoneChan:          make(chan struct{}),
 	}
 
 	s.mu.Lock()
 	s.transfers[transferId] = transfer
 	s.mu.Unlock()
 
+	// pinger
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			time.Sleep(1 * time.Second)
+			ping(transfer)
+		}
+	}()
 	// Start receiving in goroutine
-	go s.receiveFile(context.Background(), transfer)
+	go s.receiveFile(ctx, transfer)
 
-	return nil
+	return transfer.DoneChan, nil
+}
+
+func ping(transfer *ActiveTransfer) {
+	conn, err := net.DialUDP("udp", nil, transfer.ProducerAddr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error pinging producer: %v\n", err)
+		return
+	}
+
+	defer conn.Close()
+
+	pack := client.UdpPacket{
+		ContentType:  0x02, // Ping packet
+		SerialNumber: 0,
+		TransferId:   transfer.TransferId,
+		Timestamp:    time.Now(),
+		Data:         []byte{},
+	}
+	packData, err := pack.Marshal(transfer.TransferStartTime)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error marshaling ping packet: %v\n", err)
+		return
+	}
+	if _, err := conn.Write(packData); err != nil {
+		fmt.Fprintf(os.Stderr, "Error sending ping packet: %v\n", err)
+		return
+	}
+
 }
 
 // nolint:gocyclo,funlen // complex transfer logic with multiple error handling paths
 func (s *TransferService) receiveFile(ctx context.Context, transfer *ActiveTransfer) {
+	defer close(transfer.DoneChan)
 	// Create UDP connection to listen for packets
 	localAddr := &net.UDPAddr{IP: net.IPv4zero, Port: 0}
 	conn, err := net.ListenUDP("udp", localAddr)

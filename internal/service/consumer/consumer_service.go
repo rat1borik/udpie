@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"udpie/internal/handler"
 	"udpie/internal/model"
 	"udpie/internal/model/contract"
 )
@@ -28,9 +29,9 @@ func NewConsumerService(signallerURL string) *ConsumerService {
 
 // InitDownload initiates a file download and returns transfer info
 func (s *ConsumerService) InitDownload(fileId uuid.UUID, udpOptions model.UdpOptions) (*contract.InitTransferResult, error) {
-	reqBody := map[string]any{
-		"id":                 fileId.String(),
-		"client_udp_options": udpOptions,
+	reqBody := &handler.InitDownloadRequest{
+		Id:               fileId,
+		ClientUdpOptions: udpOptions,
 	}
 
 	jsonData, err := json.Marshal(reqBody)

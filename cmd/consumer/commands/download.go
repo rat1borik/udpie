@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net"
@@ -8,7 +9,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -105,15 +105,20 @@ func (c *DownloadCommand) Execute() {
 		os.Exit(1)
 	}
 
+	downloadContext, downloadContextCancel := context.WithCancel(context.Background())
+	defer downloadContextCancel()
+
 	// Start receiving file
 	transferService := consumer.NewTransferService()
-	if err := transferService.StartTransfer(
+	doneChan, err := transferService.StartTransfer(
+		downloadContext,
 		transferResult.TransferId,
 		absPath,
 		transferResult.BlockSize,
 		transferResult.TotalBlocks,
 		producerAddr,
-	); err != nil {
+	)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting transfer: %v\n", err)
 		os.Exit(1)
 	}
@@ -126,29 +131,9 @@ func (c *DownloadCommand) Execute() {
 	fmt.Println("\nWaiting for file transfer to complete...")
 	fmt.Println("Press Ctrl+C to cancel")
 
-	// Wait for transfer to complete or interrupt
-	done := make(chan bool, 1)
-	go func() {
-		for {
-			transfer, exists := transferService.GetTransferStatus(transferResult.TransferId)
-			if !exists {
-				const checkInterval = 100 * time.Millisecond
-				time.Sleep(checkInterval)
-				continue
-			}
-			status := transfer.GetStatus()
-			if status == "complete" || status == "failed" {
-				done <- true
-				return
-			}
-			const waitInterval = 500 * time.Millisecond
-			time.Sleep(waitInterval)
-		}
-	}()
-
 	// Wait for completion or interrupt
 	select {
-	case <-done:
+	case <-doneChan:
 		transfer, exists := transferService.GetTransferStatus(transferResult.TransferId)
 		if exists {
 			status := transfer.GetStatus()
@@ -161,6 +146,7 @@ func (c *DownloadCommand) Execute() {
 			}
 		}
 	case <-interruptChan:
+		downloadContextCancel()
 		fmt.Println("\nDownload canceled by user")
 		os.Exit(1)
 	}
