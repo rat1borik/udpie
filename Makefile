@@ -1,4 +1,4 @@
-.PHONY: lint lint-fix test test-coverage build build-signaller build-producer build-client clean help
+.PHONY: lint lint-fix test test-coverage build build-signaller build-producer build-client build-consumer clean help
 
 # Install golangci-lint if not present
 lint-install:
@@ -25,11 +25,11 @@ build-signaller:
 build-producer:
 	@go build -o build/producer/producer.exe ./cmd/producer
 
-build-client:
-	@go build -o build/client/client.exe ./cmd/client
+build-consumer:
+	@go build -o build/consumer/consumer.exe ./cmd/consumer
 
 # Build all binaries
-build: build-signaller build-producer build-client
+build: build-signaller build-producer build-consumer
 	@echo "All binaries built successfully"
 
 # Clean build artifacts
@@ -46,10 +46,10 @@ generate-swagger:
 # Show help message
 help:
 	@echo "Available targets:"
-	@echo "  build            - Build all binaries (signaller, producer, client)"
+	@echo "  build            - Build all binaries (signaller, producer, consumer)"
 	@echo "  build-signaller  - Build signaller binary"
 	@echo "  build-producer   - Build producer binary"
-	@echo "  build-client     - Build client binary"
+	@echo "  build-consumer   - Build consumer binary"
 	@echo "  lint             - Run linters"
 	@echo "  lint-install     - Install golangci-lint"
 	@echo "  test             - Run tests"

@@ -14,6 +14,7 @@ import (
 
 	"udpie/internal/model"
 	"udpie/internal/model/contract"
+	"udpie/internal/service/common"
 )
 
 type WebsocketListener struct {
@@ -22,13 +23,13 @@ type WebsocketListener struct {
 	conn            *websocket.Conn
 	stateService    *StateService
 	transferService *TransferService
-	stunService     *STUNService
+	stunService     *common.STUNService
 }
 
 func NewWebsocketListener(producerId uuid.UUID, signallerURL string,
 	stateService *StateService,
 	transferService *TransferService,
-	stunService *STUNService) *WebsocketListener {
+	stunService *common.STUNService) *WebsocketListener {
 	// Convert http:// to ws://
 	wsURL := signallerURL
 	if len(wsURL) >= 7 && wsURL[:7] == "http://" {

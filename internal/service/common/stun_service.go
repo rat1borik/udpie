@@ -1,4 +1,4 @@
-package producer
+package common
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 )
 
 type STUNService struct {
-	servers  []string
+	servers   []string
 	localPort int
 	timeout   time.Duration
 }

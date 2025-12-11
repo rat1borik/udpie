@@ -8,6 +8,7 @@ import (
 
 	"udpie/internal/config"
 	"udpie/internal/model"
+	"udpie/internal/service/common"
 	"udpie/internal/service/producer"
 )
 
@@ -22,11 +23,6 @@ func NewRegisterCommand(cfg *config.ProducerConfig) *RegisterCommand {
 
 func (c *RegisterCommand) Execute() {
 	fs := flag.NewFlagSet("register", flag.ExitOnError)
-	signallerURL := fs.String("signaller", c.cfg.Signaller.URL, "Signaller server URL")
-	externalIP := fs.String("ip", "", "External IP address (auto-detected via STUN if not provided)")
-	externalPort := fs.Int("port", 0, "External port (auto-detected via STUN if not provided)")
-	localPort := fs.Int("local-port", c.cfg.STUN.LocalPort, "Local UDP port for STUN query")
-	useSTUN := fs.Bool("stun", true, "Use STUN to auto-detect external IP and port")
 	stateFile := fs.String("state-file", ".udpie-producer-state.json", "Path to state file")
 
 	fs.Parse(os.Args[2:])
@@ -37,16 +33,15 @@ func (c *RegisterCommand) Execute() {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to load state: %v\n", err)
 	}
 
-	// Detect external address if needed
-	udpOptions, err := c.detectUDPOptions(*externalIP, *externalPort, *localPort, *useSTUN)
+	// Always use STUN to detect external address
+	udpOptions, err := c.detectUDPOptions()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		fs.Usage()
 		os.Exit(1)
 	}
 
-	// Register producer
-	producerService := producer.NewProducerService(*signallerURL, stateService)
+	// Register producer using signaller URL from config
+	producerService := producer.NewProducerService(c.cfg.Signaller.URL, stateService)
 	producerId, err := producerService.Register(udpOptions)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error registering producer: %v\n", err)
@@ -58,36 +53,21 @@ func (c *RegisterCommand) Execute() {
 	fmt.Printf("State saved to: %s\n", *stateFile)
 }
 
-func (c *RegisterCommand) detectUDPOptions(externalIP string, externalPort int, localPort int, useSTUN bool) (model.UdpOptions, error) {
-	// If IP and port are not provided, try to detect via STUN
-	if (externalIP == "" || externalPort == 0) && useSTUN {
-		fmt.Println("Detecting external IP and port via STUN...")
+func (c *RegisterCommand) detectUDPOptions() (model.UdpOptions, error) {
+	// Always use STUN to detect external IP and port
+	fmt.Println("Detecting external IP and port via STUN...")
 
-		stunService := producer.NewSTUNService(c.cfg.STUN.Servers, localPort, c.cfg.STUN.Timeout)
-		extAddr, err := stunService.Query()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error detecting external address via STUN: %v\n", err)
-			if externalIP == "" || externalPort == 0 {
-				return model.UdpOptions{}, fmt.Errorf("ip and port are required when STUN fails")
-			}
-		} else {
-			udpAddr := extAddr.(*net.UDPAddr)
-			if externalIP == "" {
-				externalIP = udpAddr.IP.String()
-			}
-			if externalPort == 0 {
-				externalPort = udpAddr.Port
-			}
-			fmt.Printf("Detected external address: %s:%d\n", externalIP, externalPort)
-		}
+	stunService := common.NewSTUNService(c.cfg.STUN.Servers, c.cfg.STUN.LocalPort, c.cfg.STUN.Timeout)
+	extAddr, err := stunService.Query()
+	if err != nil {
+		return model.UdpOptions{}, fmt.Errorf("failed to detect external address via STUN: %w", err)
 	}
 
-	if externalIP == "" || externalPort == 0 {
-		return model.UdpOptions{}, fmt.Errorf("ip and port are required")
-	}
+	udpAddr := extAddr.(*net.UDPAddr)
+	fmt.Printf("Detected external address: %s:%d\n", udpAddr.IP.String(), udpAddr.Port)
 
 	return model.UdpOptions{
-		ExternalIp:   externalIP,
-		ExternalPort: externalPort,
+		ExternalIp:   udpAddr.IP.String(),
+		ExternalPort: udpAddr.Port,
 	}, nil
 }

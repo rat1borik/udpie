@@ -56,7 +56,7 @@ func (s *TransferService) InitTransfer(options contract.InitTransferOptions) (*c
 		Type:       "init_transfer",
 		Data: model.ProducerInitTransferRequestData{
 			FileId:             fileMeta.Id,
-			BlockSize:          transfer.FileMeta.Size,
+			BlockSize:          transfer.BlockSize,
 			BlocksCount:        transfer.TotalBlocks,
 			ConsumerId:         consumer.Id,
 			ConsumerUdpOptions: consumer.UdpOptions,
