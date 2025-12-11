@@ -11,9 +11,9 @@ import (
 )
 
 type RegisterFileRequest struct {
-	Name    string    `json:"name"`
-	Size    uint64    `json:"size"`
-	OwnerId uuid.UUID `json:"owner_id"`
+	Name       string    `json:"name"`
+	Size       uint64    `json:"size"`
+	ProducerId uuid.UUID `json:"producer_id"`
 }
 
 type FileHandler struct {
@@ -46,16 +46,16 @@ func (h *FileHandler) RegisterFile(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	producer, err := h.producerService.GetProducer(request.OwnerId)
+	_, err := h.producerService.GetProducer(request.ProducerId)
 	if err != nil {
 		ctx.Error("Producer not found", fasthttp.StatusBadRequest)
 		return
 	}
 
 	id, err := h.service.RegisterFile(contract.RegisterFileOptions{
-		Name:  request.Name,
-		Size:  request.Size,
-		Owner: producer,
+		Name:       request.Name,
+		Size:       request.Size,
+		ProducerId: request.ProducerId,
 	})
 	if err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)

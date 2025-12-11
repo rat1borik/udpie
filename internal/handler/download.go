@@ -51,7 +51,7 @@ func (h *InitDownloadHandler) InitDownload(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	transferId, err := h.transferService.InitTransfer(contract.InitTransferOptions{
+	transfer, err := h.transferService.InitTransfer(contract.InitTransferOptions{
 		FileId:             request.Id,
 		ConsumerUdpOptions: request.ClientUdpOptions,
 	})
@@ -60,5 +60,5 @@ func (h *InitDownloadHandler) InitDownload(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	Success(ctx, map[string]string{"id": transferId.String()})
+	Success(ctx, transfer)
 }

@@ -41,7 +41,7 @@ func (s *ProducerService) GetProducer(id uuid.UUID) (*model.Producer, error) {
 		return nil, errors.New("producer not found")
 	}
 
-	return producer, nil
+	return producer.Clone(), nil
 }
 
 func (s *ProducerService) UpdateProducer(id uuid.UUID, options contract.RegisterProducerOptions) error {
@@ -54,5 +54,18 @@ func (s *ProducerService) UpdateProducer(id uuid.UUID, options contract.Register
 	}
 
 	producer.UdpOptions = options.UdpOptions
+	return nil
+}
+
+func (s *ProducerService) UpdateUdpOptions(id uuid.UUID, options model.UdpOptions) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	producer, exists := s.producers[id]
+	if !exists {
+		return errors.New("producer not found")
+	}
+
+	producer.UdpOptions = options
 	return nil
 }

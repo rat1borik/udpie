@@ -13,3 +13,10 @@ func NewProducer(udpOptions UdpOptions) *Producer {
 		UdpOptions: udpOptions,
 	}
 }
+
+func (p *Producer) Clone() *Producer {
+	return &Producer{
+		Id:         p.Id,
+		UdpOptions: p.UdpOptions,
+	}
+}

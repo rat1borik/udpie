@@ -47,10 +47,11 @@ func main() {
 
 func startServer(cfg *config.SignallerConfig) {
 	producerService := signaller.NewProducerService()
-	fileService := signaller.NewFileService()
-	transferService := signaller.NewTransferService(fileService, producerService)
+	fileService := signaller.NewFileService(producerService)
+	wsService := signaller.NewWebsocketService(producerService)
+	transferService := signaller.NewTransferService(fileService, producerService, wsService)
 
-	appRouter := handler.NewRouter(producerService, fileService, transferService)
+	appRouter := handler.NewRouter(producerService, fileService, transferService, wsService)
 	fastRouter := router.New()
 	appRouter.SetupRoutes(fastRouter)
 

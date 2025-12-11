@@ -11,13 +11,15 @@ import (
 )
 
 type FileService struct {
-	mu    sync.RWMutex
-	files map[uuid.UUID]*model.FileMeta
+	mu              sync.RWMutex
+	files           map[uuid.UUID]*model.FileMeta
+	ProducerService contract.SignallerProducerService
 }
 
-func NewFileService() *FileService {
+func NewFileService(producerService contract.SignallerProducerService) *FileService {
 	return &FileService{
-		files: make(map[uuid.UUID]*model.FileMeta),
+		files:           make(map[uuid.UUID]*model.FileMeta),
+		ProducerService: producerService,
 	}
 }
 
@@ -25,7 +27,12 @@ func (s *FileService) RegisterFile(options contract.RegisterFileOptions) (uuid.U
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	fileMeta := model.NewFileMeta(options.Name, options.Size, options.Hash, options.Owner)
+	_, err := s.ProducerService.GetProducer(options.ProducerId)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	fileMeta := model.NewFileMeta(options.Name, options.Size, options.Hash, options.ProducerId)
 	s.files[fileMeta.Id] = fileMeta
 	return fileMeta.Id, nil
 }
@@ -39,5 +46,5 @@ func (s *FileService) GetFileMeta(id uuid.UUID) (*model.FileMeta, error) {
 		return nil, errors.New("file not found")
 	}
 
-	return fileMeta, nil
+	return fileMeta.Clone(), nil
 }
