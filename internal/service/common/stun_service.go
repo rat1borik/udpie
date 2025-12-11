@@ -14,7 +14,7 @@ type STUNService struct {
 	timeout   time.Duration
 }
 
-func NewSTUNService(servers []string, localPort int, timeoutSeconds int) *STUNService {
+func NewSTUNService(servers []string, localPort, timeoutSeconds int) *STUNService {
 	return &STUNService{
 		servers:   servers,
 		localPort: localPort,
@@ -55,13 +55,13 @@ func (s *STUNService) queryServer(serverAddr string) (net.Addr, error) {
 	message := stun.MustBuild(stun.TransactionID, stun.BindingRequest)
 
 	// Send STUN request
-	if _, err := conn.Write(message.Raw); err != nil {
-		return nil, fmt.Errorf("failed to send STUN request: %w", err)
+	if _, writeErr := conn.Write(message.Raw); writeErr != nil {
+		return nil, fmt.Errorf("failed to send STUN request: %w", writeErr)
 	}
 
 	// Set read deadline
-	if err := conn.SetReadDeadline(time.Now().Add(s.timeout)); err != nil {
-		return nil, fmt.Errorf("failed to set read deadline: %w", err)
+	if deadlineErr := conn.SetReadDeadline(time.Now().Add(s.timeout)); deadlineErr != nil {
+		return nil, fmt.Errorf("failed to set read deadline: %w", deadlineErr)
 	}
 
 	// Read STUN response
@@ -88,4 +88,3 @@ func (s *STUNService) queryServer(serverAddr string) (net.Addr, error) {
 		Port: xorAddr.Port,
 	}, nil
 }
-

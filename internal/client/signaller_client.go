@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,7 +38,12 @@ func (c *SignallerClient) RegisterProducer(udpOptions model.UdpOptions) (uuid.UU
 	}
 
 	url := fmt.Sprintf("%s/api/producers", c.baseURL)
-	resp, err := c.client.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to send request: %w", err)
 	}
@@ -51,8 +57,8 @@ func (c *SignallerClient) RegisterProducer(udpOptions model.UdpOptions) (uuid.UU
 	var result struct {
 		ID string `json:"id"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return uuid.Nil, fmt.Errorf("failed to decode response: %w", err)
+	if decodeErr := json.NewDecoder(resp.Body).Decode(&result); decodeErr != nil {
+		return uuid.Nil, fmt.Errorf("failed to decode response: %w", decodeErr)
 	}
 
 	producerId, err := uuid.Parse(result.ID)
@@ -65,7 +71,7 @@ func (c *SignallerClient) RegisterProducer(udpOptions model.UdpOptions) (uuid.UU
 
 // RegisterFile registers a file and returns the file ID
 func (c *SignallerClient) RegisterFile(name string, size uint64, producerId uuid.UUID) (uuid.UUID, error) {
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"name":        name,
 		"size":        size,
 		"producer_id": producerId.String(),
@@ -77,7 +83,12 @@ func (c *SignallerClient) RegisterFile(name string, size uint64, producerId uuid
 	}
 
 	url := fmt.Sprintf("%s/api/files", c.baseURL)
-	resp, err := c.client.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to send request: %w", err)
 	}
@@ -91,8 +102,8 @@ func (c *SignallerClient) RegisterFile(name string, size uint64, producerId uuid
 	var result struct {
 		ID string `json:"id"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return uuid.Nil, fmt.Errorf("failed to decode response: %w", err)
+	if decodeErr := json.NewDecoder(resp.Body).Decode(&result); decodeErr != nil {
+		return uuid.Nil, fmt.Errorf("failed to decode response: %w", decodeErr)
 	}
 
 	fileId, err := uuid.Parse(result.ID)
@@ -102,4 +113,3 @@ func (c *SignallerClient) RegisterFile(name string, size uint64, producerId uuid
 
 	return fileId, nil
 }
-

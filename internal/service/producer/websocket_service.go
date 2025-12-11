@@ -94,8 +94,11 @@ func (w *WebsocketListener) Listen() error {
 		fmt.Println("\nShutting down...")
 		// Close connection gracefully
 		closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
-		conn.WriteMessage(websocket.CloseMessage, closeMsg)
-		time.Sleep(100 * time.Millisecond)
+		if err := conn.WriteMessage(websocket.CloseMessage, closeMsg); err != nil {
+			fmt.Printf("Error sending close message: %v\n", err)
+		}
+		const closeDelay = 100 * time.Millisecond
+		time.Sleep(closeDelay)
 	case <-done:
 		fmt.Println("Connection closed")
 	}
@@ -172,7 +175,10 @@ func (w *WebsocketListener) handleInitTransferRequest(requestId string, requestD
 		Data:       responseData,
 	}
 
-	w.conn.WriteJSON(response)
+	if writeErr := w.conn.WriteJSON(response); writeErr != nil {
+		fmt.Printf("Error sending response: %v\n", writeErr)
+		return
+	}
 
 	fmt.Printf("Accepted transfer request\n")
 	fmt.Printf("  File ID: %s\n", requestData.FileId.String())
@@ -207,8 +213,8 @@ func (w *WebsocketListener) handleInitTransferRequest(requestId string, requestD
 	fmt.Printf("Transfer started: %s\n", transferId.String())
 }
 
-func (w *WebsocketListener) sendErrorResponse(requestId string, errorMsg string) {
-	response := map[string]interface{}{
+func (w *WebsocketListener) sendErrorResponse(requestId, errorMsg string) {
+	response := map[string]any{
 		"request_id":  requestId,
 		"producer_id": w.producerId.String(),
 		"error":       errorMsg,
@@ -225,12 +231,12 @@ func (w *WebsocketListener) sendErrorResponse(requestId string, errorMsg string)
 	}
 }
 
-func (w *WebsocketListener) sendRejectResponse(requestId string, reason string) {
+func (w *WebsocketListener) sendRejectResponse(requestId, reason string) {
 	responseData := model.ProducerInitTransferResponseData{
 		Status: model.RequestTransferStatusRejected,
 	}
 
-	response := map[string]interface{}{
+	response := map[string]any{
 		"request_id":  requestId,
 		"producer_id": w.producerId.String(),
 		"data":        responseData,

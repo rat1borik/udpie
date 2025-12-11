@@ -27,12 +27,16 @@ func NewDownloadCommand(cfg *config.ProducerConfig) *DownloadCommand {
 	return &DownloadCommand{cfg: cfg}
 }
 
+// nolint:gocyclo,funlen // complex download logic with multiple error handling paths
 func (c *DownloadCommand) Execute() {
 	fs := flag.NewFlagSet("download", flag.ExitOnError)
 	fileIdStr := fs.String("file-id", "", "File ID to download (required)")
 	outputPath := fs.String("output", "", "Output file path (optional, defaults to file name)")
 
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	if *fileIdStr == "" {
 		fmt.Fprintf(os.Stderr, "Error: -file-id is required\n")
@@ -86,8 +90,9 @@ func (c *DownloadCommand) Execute() {
 
 	// Create directory if needed
 	dir := filepath.Dir(absPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create directory: %v\n", err)
+	const dirPerm = 0755
+	if mkdirErr := os.MkdirAll(dir, dirPerm); mkdirErr != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to create directory: %v\n", mkdirErr)
 		os.Exit(1)
 	}
 
@@ -127,7 +132,8 @@ func (c *DownloadCommand) Execute() {
 		for {
 			transfer, exists := transferService.GetTransferStatus(transferResult.TransferId)
 			if !exists {
-				time.Sleep(100 * time.Millisecond)
+				const checkInterval = 100 * time.Millisecond
+				time.Sleep(checkInterval)
 				continue
 			}
 			status := transfer.GetStatus()
@@ -135,7 +141,8 @@ func (c *DownloadCommand) Execute() {
 				done <- true
 				return
 			}
-			time.Sleep(500 * time.Millisecond)
+			const waitInterval = 500 * time.Millisecond
+			time.Sleep(waitInterval)
 		}
 	}()
 
@@ -154,7 +161,7 @@ func (c *DownloadCommand) Execute() {
 			}
 		}
 	case <-interruptChan:
-		fmt.Println("\nDownload cancelled by user")
+		fmt.Println("\nDownload canceled by user")
 		os.Exit(1)
 	}
 }

@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,8 +28,8 @@ func NewConsumerService(signallerURL string) *ConsumerService {
 
 // InitDownload initiates a file download and returns transfer info
 func (s *ConsumerService) InitDownload(fileId uuid.UUID, udpOptions model.UdpOptions) (*contract.InitTransferResult, error) {
-	reqBody := map[string]interface{}{
-		"id":                fileId.String(),
+	reqBody := map[string]any{
+		"id":                 fileId.String(),
 		"client_udp_options": udpOptions,
 	}
 
@@ -38,7 +39,12 @@ func (s *ConsumerService) InitDownload(fileId uuid.UUID, udpOptions model.UdpOpt
 	}
 
 	url := fmt.Sprintf("%s/api/initDownload", s.signallerURL)
-	resp, err := s.client.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := s.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
@@ -56,4 +62,3 @@ func (s *ConsumerService) InitDownload(fileId uuid.UUID, udpOptions model.UdpOpt
 
 	return &result, nil
 }
-

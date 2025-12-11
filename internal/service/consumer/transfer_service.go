@@ -19,14 +19,14 @@ type TransferService struct {
 }
 
 type ActiveTransfer struct {
-	TransferId    uuid.UUID
-	FilePath      string
-	BlockSize     uint64
-	TotalBlocks   uint64
-	ProducerAddr  *net.UDPAddr
-	Status        string
+	TransferId     uuid.UUID
+	FilePath       string
+	BlockSize      uint64
+	TotalBlocks    uint64
+	ProducerAddr   *net.UDPAddr
+	Status         string
 	ReceivedBlocks map[uint64][]byte
-	mu            sync.Mutex
+	mu             sync.Mutex
 }
 
 func NewTransferService() *TransferService {
@@ -45,12 +45,12 @@ func (s *TransferService) StartTransfer(
 ) error {
 	// Create active transfer
 	transfer := &ActiveTransfer{
-		TransferId:    transferId,
-		FilePath:      filePath,
-		BlockSize:     blockSize,
-		TotalBlocks:   totalBlocks,
-		ProducerAddr:  producerAddr,
-		Status:        "receiving",
+		TransferId:     transferId,
+		FilePath:       filePath,
+		BlockSize:      blockSize,
+		TotalBlocks:    totalBlocks,
+		ProducerAddr:   producerAddr,
+		Status:         "receiving",
 		ReceivedBlocks: make(map[uint64][]byte),
 	}
 
@@ -64,6 +64,7 @@ func (s *TransferService) StartTransfer(
 	return nil
 }
 
+// nolint:gocyclo,funlen // complex transfer logic with multiple error handling paths
 func (s *TransferService) receiveFile(ctx context.Context, transfer *ActiveTransfer) {
 	// Create UDP connection to listen for packets
 	localAddr := &net.UDPAddr{IP: net.IPv4zero, Port: 0}
@@ -78,7 +79,8 @@ func (s *TransferService) receiveFile(ctx context.Context, transfer *ActiveTrans
 	defer conn.Close()
 
 	transferStartTime := time.Now()
-	buffer := make([]byte, 65507) // Max UDP packet size
+	const maxUDPPacketSize = 65507 // Max UDP packet size
+	buffer := make([]byte, maxUDPPacketSize)
 
 	fmt.Printf("Starting file download: %s\n", transfer.FilePath)
 	fmt.Printf("Transfer ID: %s\n", transfer.TransferId.String())
@@ -92,13 +94,14 @@ func (s *TransferService) receiveFile(ctx context.Context, transfer *ActiveTrans
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("Transfer cancelled: %s\n", transfer.TransferId.String())
+			fmt.Printf("Transfer canceled: %s\n", transfer.TransferId.String())
 			return
 		default:
 		}
 
 		// Set read deadline
-		if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		const readTimeout = 5 * time.Second
+		if err := conn.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
 			fmt.Printf("Error setting read deadline: %v\n", err)
 			continue
 		}
@@ -107,11 +110,13 @@ func (s *TransferService) receiveFile(ctx context.Context, transfer *ActiveTrans
 		if err != nil {
 			// Check if we've received all blocks
 			transfer.mu.Lock()
-			if len(transfer.ReceivedBlocks) >= int(transfer.TotalBlocks) {
-				transfer.mu.Unlock()
+			currentReceivedCount := len(transfer.ReceivedBlocks)
+			transfer.mu.Unlock()
+
+			// nolint:gosec // TotalBlocks is controlled by the protocol and safe to convert
+			if currentReceivedCount >= int(transfer.TotalBlocks) {
 				break
 			}
-			transfer.mu.Unlock()
 
 			// Check if timeout (expected when no more packets)
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -120,6 +125,7 @@ func (s *TransferService) receiveFile(ctx context.Context, transfer *ActiveTrans
 				received := len(transfer.ReceivedBlocks)
 				transfer.mu.Unlock()
 
+				// nolint:gosec // TotalBlocks is controlled by the protocol and safe to convert
 				if received >= int(transfer.TotalBlocks) {
 					break
 				}
@@ -152,14 +158,16 @@ func (s *TransferService) receiveFile(ctx context.Context, transfer *ActiveTrans
 		// Store received block
 		transfer.mu.Lock()
 		transfer.ReceivedBlocks[packet.SerialNumber] = packet.Data
-		receivedCount++
+		receivedCount = len(transfer.ReceivedBlocks)
 		transfer.mu.Unlock()
 
-		if receivedCount%100 == 0 || receivedCount == int(transfer.TotalBlocks) {
+		// nolint:gosec // TotalBlocks is controlled by the protocol and safe to convert
+		if receivedCount%100 == 0 || receivedCount >= int(transfer.TotalBlocks) {
 			fmt.Printf("Received block %d/%d\n", receivedCount, transfer.TotalBlocks)
 		}
 
 		// Check if we've received all blocks
+		// nolint:gosec // TotalBlocks is controlled by the protocol and safe to convert
 		if receivedCount >= int(transfer.TotalBlocks) {
 			break
 		}
@@ -182,7 +190,7 @@ func (s *TransferService) receiveFile(ctx context.Context, transfer *ActiveTrans
 	fmt.Printf("File saved to: %s\n", transfer.FilePath)
 }
 
-func (s *TransferService) writeFile(transfer *ActiveTransfer) error {
+func (*TransferService) writeFile(transfer *ActiveTransfer) error {
 	// Create output file
 	file, err := os.Create(transfer.FilePath)
 	if err != nil {
@@ -191,7 +199,7 @@ func (s *TransferService) writeFile(transfer *ActiveTransfer) error {
 	defer file.Close()
 
 	// Write blocks in order
-	for blockNum := uint64(0); blockNum < transfer.TotalBlocks; blockNum++ {
+	for blockNum := range uint64(transfer.TotalBlocks) {
 		blockData, exists := transfer.ReceivedBlocks[blockNum]
 		if !exists {
 			// Missing block, fill with zeros
@@ -222,4 +230,3 @@ func (t *ActiveTransfer) GetStatus() string {
 	defer t.mu.Unlock()
 	return t.Status
 }
-

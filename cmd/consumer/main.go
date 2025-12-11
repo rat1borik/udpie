@@ -44,4 +44,3 @@ Commands:
 Use '%s <command> -help' for command-specific help.
 `, os.Args[0], os.Args[0])
 }
-

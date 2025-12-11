@@ -26,7 +26,10 @@ func (c *ListenCommand) Execute() {
 	producerIdStr := fs.String("producer-id", "", "Producer ID (optional, will use saved ID if not provided)")
 	stateFile := fs.String("state-file", ".udpie-producer-state.json", "Path to state file")
 
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Initialize STUN service using config
 	stunService := common.NewSTUNService(c.cfg.STUN.Servers, c.cfg.STUN.LocalPort, c.cfg.STUN.Timeout)
@@ -55,7 +58,7 @@ func (c *ListenCommand) Execute() {
 	}
 }
 
-func (c *ListenCommand) getProducerID(producerIdStr string, stateService *producer.StateService) (uuid.UUID, error) {
+func (*ListenCommand) getProducerID(producerIdStr string, stateService *producer.StateService) (uuid.UUID, error) {
 	if producerIdStr != "" {
 		producerId, err := uuid.Parse(producerIdStr)
 		if err != nil {

@@ -25,7 +25,10 @@ func (c *RegisterCommand) Execute() {
 	fs := flag.NewFlagSet("register", flag.ExitOnError)
 	stateFile := fs.String("state-file", ".udpie-producer-state.json", "Path to state file")
 
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Initialize state service
 	stateService := producer.NewStateService(*stateFile)

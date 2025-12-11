@@ -14,21 +14,21 @@ import (
 )
 
 type TransferService struct {
-	mu          sync.RWMutex
-	transfers   map[uuid.UUID]*ActiveTransfer
+	mu           sync.RWMutex
+	transfers    map[uuid.UUID]*ActiveTransfer
 	stateService *StateService
 }
 
 type ActiveTransfer struct {
-	TransferId    uuid.UUID
-	FileId        uuid.UUID
-	FilePath      string
-	BlockSize     uint64
-	TotalBlocks   uint64
-	ConsumerAddr  *net.UDPAddr
-	Status        string
-	SentBlocks    map[uint64]bool
-	mu            sync.Mutex
+	TransferId   uuid.UUID
+	FileId       uuid.UUID
+	FilePath     string
+	BlockSize    uint64
+	TotalBlocks  uint64
+	ConsumerAddr *net.UDPAddr
+	Status       string
+	SentBlocks   map[uint64]bool
+	mu           sync.Mutex
 }
 
 func NewTransferService(stateService *StateService) *TransferService {
@@ -59,14 +59,14 @@ func (s *TransferService) StartTransfer(
 
 	// Create active transfer
 	transfer := &ActiveTransfer{
-		TransferId:  transferId,
-		FileId:      fileId,
-		FilePath:    fileInfo.FilePath,
-		BlockSize:   blockSize,
-		TotalBlocks: totalBlocks,
+		TransferId:   transferId,
+		FileId:       fileId,
+		FilePath:     fileInfo.FilePath,
+		BlockSize:    blockSize,
+		TotalBlocks:  totalBlocks,
 		ConsumerAddr: consumerAddr,
-		Status:      "sending",
-		SentBlocks:  make(map[uint64]bool),
+		Status:       "sending",
+		SentBlocks:   make(map[uint64]bool),
 	}
 
 	s.mu.Lock()
@@ -79,7 +79,7 @@ func (s *TransferService) StartTransfer(
 	return nil
 }
 
-func (s *TransferService) sendFile(ctx context.Context, transfer *ActiveTransfer) {
+func (*TransferService) sendFile(ctx context.Context, transfer *ActiveTransfer) {
 	file, err := os.Open(transfer.FilePath)
 	if err != nil {
 		fmt.Printf("Error opening file %s: %v\n", transfer.FilePath, err)
@@ -111,10 +111,10 @@ func (s *TransferService) sendFile(ctx context.Context, transfer *ActiveTransfer
 	fmt.Printf("Consumer: %s\n", transfer.ConsumerAddr.String())
 
 	// Send all blocks
-	for blockNum := uint64(0); blockNum < transfer.TotalBlocks; blockNum++ {
+	for blockNum := range uint64(transfer.TotalBlocks) {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("Transfer cancelled: %s\n", transfer.TransferId.String())
+			fmt.Printf("Transfer canceled: %s\n", transfer.TransferId.String())
 			return
 		default:
 		}
@@ -175,4 +175,3 @@ func (s *TransferService) GetTransferStatus(transferId uuid.UUID) (*ActiveTransf
 	transfer, exists := s.transfers[transferId]
 	return transfer, exists
 }
-

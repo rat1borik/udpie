@@ -28,7 +28,10 @@ func (c *RegisterFileCommand) Execute() {
 	filePath := fs.String("path", "", "Path to file (required)")
 	stateFile := fs.String("state-file", ".udpie-producer-state.json", "Path to state file")
 
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	if *filePath == "" {
 		fmt.Fprintf(os.Stderr, "Error: -path is required\n")
@@ -45,8 +48,8 @@ func (c *RegisterFileCommand) Execute() {
 
 	// Initialize state service
 	stateService := producer.NewStateService(*stateFile)
-	if err := stateService.Load(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: Failed to load state: %v\n", err)
+	if loadErr := stateService.Load(); loadErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load state: %v\n", loadErr)
 	}
 
 	// Get producer ID
@@ -70,7 +73,7 @@ func (c *RegisterFileCommand) Execute() {
 	fmt.Printf("State saved to: %s\n", *stateFile)
 }
 
-func (c *RegisterFileCommand) validateFile(filePath string) (absPath string, fileName string, fileSize uint64, err error) {
+func (*RegisterFileCommand) validateFile(filePath string) (absPath, fileName string, fileSize uint64, err error) {
 	// Get absolute path
 	absPath, err = filepath.Abs(filePath)
 	if err != nil {
@@ -91,12 +94,13 @@ func (c *RegisterFileCommand) validateFile(filePath string) (absPath string, fil
 	}
 
 	fileName = fileInfo.Name()
+	// nolint:gosec // fileInfo.Size() returns int64, safe to convert to uint64 for file sizes
 	fileSize = uint64(fileInfo.Size())
 
 	return absPath, fileName, fileSize, nil
 }
 
-func (c *RegisterFileCommand) getProducerID(producerIdStr string, stateService *producer.StateService) (uuid.UUID, error) {
+func (*RegisterFileCommand) getProducerID(producerIdStr string, stateService *producer.StateService) (uuid.UUID, error) {
 	if producerIdStr != "" {
 		producerId, err := uuid.Parse(producerIdStr)
 		if err != nil {
@@ -114,4 +118,3 @@ func (c *RegisterFileCommand) getProducerID(producerIdStr string, stateService *
 	fmt.Printf("Using saved ProducerId: %s\n", savedId.String())
 	return savedId, nil
 }
-

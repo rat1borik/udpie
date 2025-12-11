@@ -75,12 +75,14 @@ func (s *StateService) Save() error {
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(s.stateFile)
 	if dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		const dirPerm = 0755
+		if err := os.MkdirAll(dir, dirPerm); err != nil {
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
 	}
 
-	if err := os.WriteFile(s.stateFile, data, 0644); err != nil {
+	const filePerm = 0600
+	if err := os.WriteFile(s.stateFile, data, filePerm); err != nil {
 		return fmt.Errorf("failed to write state file: %w", err)
 	}
 

@@ -8,6 +8,8 @@ require (
 	github.com/fasthttp/router v1.5.4
 	github.com/fasthttp/websocket v1.5.12
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
+	github.com/pion/stun/v2 v2.0.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.21.0
 	github.com/swaggo/fasthttp-swagger v1.0.2
@@ -32,12 +34,10 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.25.4 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pion/dtls/v2 v2.2.7 // indirect
 	github.com/pion/logging v0.2.2 // indirect
-	github.com/pion/stun/v2 v2.0.0 // indirect
 	github.com/pion/transport/v2 v2.2.1 // indirect
 	github.com/pion/transport/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect

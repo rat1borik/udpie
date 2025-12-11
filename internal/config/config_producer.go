@@ -4,6 +4,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	defaultSTUNLocalPort = 50000
+	defaultSTUNTimeout   = 5
+)
+
 type ProducerConfig struct {
 	Signaller ProducerSignallerConfig `mapstructure:"signaller"`
 	STUN      STUNConfig              `mapstructure:"stun"`
@@ -32,8 +37,8 @@ func LoadProducerConfig() (*ProducerConfig, error) {
 		"global.stun.twilio.com:3478",
 		"stun.l.google.com:19302",
 	})
-	viper.SetDefault("stun.local_port", 50000)
-	viper.SetDefault("stun.timeout", 5)
+	viper.SetDefault("stun.local_port", defaultSTUNLocalPort)
+	viper.SetDefault("stun.timeout", defaultSTUNTimeout)
 
 	// Read environment variables
 	viper.AutomaticEnv()
@@ -41,6 +46,7 @@ func LoadProducerConfig() (*ProducerConfig, error) {
 	if err := viper.ReadInConfig(); err != nil {
 		// If config file not found, use defaults
 		// This is OK, we'll use default values
+		_ = err // explicitly ignore error
 	}
 
 	var config ProducerConfig
